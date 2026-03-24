@@ -23,7 +23,7 @@ to perform screen-based automation.
 
 This project separates **orchestration** from **UI automation**:
 
-* The **backend (this project)** handles:
+* The **back-end (this project)** handles:
 
   * job intake (email / data)
   * validation
@@ -37,7 +37,7 @@ This project separates **orchestration** from **UI automation**:
   * keyboard input
   * ERP/UI interaction
 
-They communicate through a file-based IPC mechanism (`handover.txt`).
+They communicate through a file-based IPC mechanism (`handover.json`).
 
 ---
 
