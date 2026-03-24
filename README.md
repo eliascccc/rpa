@@ -6,14 +6,16 @@ A lightweight local orchestrator for email- and data-driven automation, delegati
 
 ## Overview
 
-**LocalRPA Orchestrator** is a minimal Python runtime designed to orchestrate automations tasks in small teams.
+This project is a lightweight local RPA orchestrator written in Python.
 
-It runs locally on a standard operator machine and acts as the **control layer** between:
+It is designed as a simple alternative to heavy enterprise orchestrators,
+focusing on clarity, ease of modification, and running on a single machine.
 
-* incoming job triggers (email, shared inbox, data queries)
-* and external RPA tools (UiPath, Power Automate, Blue Prism, etc.)
+It does NOT replace RPA tools.
 
-This project is designed for small, local deployments without requiring servers, cloud infrastructure, or additional backend licensing beyond your RPA tool.
+Instead, it orchestrates them:
+you still need a real RPA tool (Power Automate, UiPath Studio, Blue Prism, etc.)
+to perform screen-based automation.
 
 ---
 
