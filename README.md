@@ -55,7 +55,7 @@ They communicate through a file-based IPC mechanism (`handover.json`).
 
 ## Architecture
 
-<img width="1140" height="1735" alt="workflow" src="https://github.com/user-attachments/assets/759db4e0-51c8-4b54-9925-b4081236bcc5" />
+<img width="1140" height="1709" alt="workflow" src="https://github.com/user-attachments/assets/8c94348e-be80-4a39-bc64-226e38f67167" />
 
 
 The diagram defines the interaction:
@@ -72,15 +72,13 @@ The diagram defines the interaction:
 * Email-driven job processing (personal inbox)
 * Shared inbox support (extensible)
 * Data-driven jobs (ERP/query simulation)
-* File-based IPC (`handover.json`)
 * SQLite audit logging (`job_audit.db`)
 * Crash-safe mode (`safestop`)
-* Manual reboot mechanism (`reboot.flag`)
-* Network-aware execution
+* remote reboot mechanism (`reboot.flag`)
 * Built-in screen recording (ffmpeg)
 * Works without admin rights
-* Easy to share the full runtime with an AI assistant
 * Runs on both Windows and Linux
+* Just one file makes it easy to share all code with an AI assistant (`main.py`)
 
 ---
 
@@ -89,8 +87,8 @@ The diagram defines the interaction:
 * **Simplicity over scalability**
 * **Local-first execution**
 * **Fail fast and visibly**
-* **No hidden state (file + DB only)**
 * **Deterministic job lifecycle**
+* **Complete runtime in one file**
 * **Cheap to deploy and operate**
 
 ---
@@ -216,7 +214,7 @@ recordings/
 ## Philosophy
 
 > This is not a full RPA platform.
-> It is the simplest possible glue between:
+> It is the simplest possible layer between:
 >
 > * business triggers (email/data)
 > * and UI automation (RPA tools)
