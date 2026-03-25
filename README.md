@@ -8,7 +8,7 @@ A lightweight local orchestrator for email- and data-driven automation, delegati
 
 This project is a lightweight local RPA orchestrator written in Python.
 
-It is designed as a small-scale local alternative to enterprise orchestrators,
+It is designed as a small-scale alternative where enterprise orchestrators would be unnecessary overhead,
 focusing on clarity, ease of modification, and running on a single machine.
 
 It does NOT replace RPA tools.
@@ -26,7 +26,7 @@ A typical email-driven flow is that a user sends an email to the robot asking it
 
 Another main flow is data-driven. In that case, the orchestrator itself discovers work by polling a query or another data source. When it finds a valid case, it prepares the required values and signals the front-end RPA to execute the task.
 
-It could look like this from the orchestrators side:
+It could look like this from the orchestrator side:
 <img width="1209" height="635" alt="example_dash" src="https://github.com/user-attachments/assets/dc12a84b-c329-4b91-b402-387128197f9a" />
 
 ---
@@ -63,7 +63,7 @@ The diagram defines the interaction:
 * Both operate in their own loops
 * State is synchronized via handover.json
 * Failures transition the system into safestop
-* Your front-end RPA tool must be build to follow this model
+* Your front-end RPA tool must be built to follow this model
 
 
 ## Features
@@ -177,7 +177,7 @@ Use included dev tools:
 main.py
 personal_inbox/
 shared_inbox/
-handover.txt
+handover.json
 job_audit.db
 friends.xlsx
 recordings/
