@@ -26,6 +26,9 @@ A typical email-driven flow is that a user sends an email to the robot asking it
 
 Another main flow is data-driven. In that case, the orchestrator itself discovers work by polling a query or another data source. When it finds a valid case, it prepares the required values and signals the front-end RPA to execute the task.
 
+It could look like this in the orchestrators dashboard:
+<img width="1209" height="635" alt="example_dash" src="https://github.com/user-attachments/assets/dc12a84b-c329-4b91-b402-387128197f9a" />
+
 ---
 
 ## Key Idea
@@ -140,15 +143,6 @@ The handover file represents both:
 
 ---
 
-## Example Dashboard
-
-<img width="1209" height="635" alt="example_dash" src="https://github.com/user-attachments/assets/dc12a84b-c329-4b91-b402-387128197f9a" />
-
-The dashboard shows:
-* Email Pipeline in different scenarious
-* Scheduled Jobs Pipeline
-
----
 
 ## Running the Project
 
