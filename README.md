@@ -19,6 +19,15 @@ to perform screen-based automation.
 
 ---
 
+
+## Typical examples
+
+A typical email-driven flow is that a user sends an email to the robot asking it to perform a task. The orchestrator reads the request, validates the input, prepares the required payload, and writes the handover state. The front-end RPA tool then picks up the job and performs the UI actions.
+
+Another main flow is data-driven. In that case, the orchestrator itself discovers work by polling a query or another data source. When it finds a valid case, it prepares the required values and signals the front-end RPA to execute the task.
+
+---
+
 ## Key Idea
 
 This project separates **orchestration** from **UI automation**:
@@ -58,8 +67,8 @@ The diagram shows how:
 * Email-driven job processing (own inbox)
 * Shared inbox support (extensible)
 * Data-driven jobs (ERP/query simulation)
-* File-based IPC (`handover.txt`)
-* SQLite audit logging (`audit.db`)
+* File-based IPC (`handover.json`)
+* SQLite audit logging (`job_audit.db`)
 * Crash-safe mode (`safestop`)
 * Manual reboot mechanism (`reboot.flag`)
 * Network-aware execution
@@ -85,7 +94,7 @@ The diagram shows how:
 
 The system supports multiple job producers:
 
-* Personal inbox (`own_inbox`)
+* Personal inbox (`personal_inbox`)
 * Shared mailbox (planned/partial)
 * Scheduled jobs (ERP/data queries)
 
@@ -127,38 +136,6 @@ The handover file represents both:
   * `DONE`
   * `FAIL`
   * "lifesign" (once per day)
-
----
-
-## Example Jobs
-
-### Ping
-
-Send:
-
-```
-Subject: ping
-```
-
-Reply:
-
-```
-PONG (robot online)
-```
-
----
-
-### Job1 (example)
-
-Email body:
-
-```
-SKU: 123
-Old material: ABC
-New material: XYZ
-```
-
-Validated and passed to RPA for execution.
 
 ---
 
