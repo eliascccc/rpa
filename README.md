@@ -180,6 +180,7 @@ Use included dev tools:
 
 * `fake_jobs_generator.py`
 * `rpa_tool_simulator.py`
+* `select_all_from_job_audit.py`
 
 ---
 
