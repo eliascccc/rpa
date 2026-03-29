@@ -6,7 +6,7 @@ A lightweight orchestrator that keeps logic in Python and delegates UI work to R
 
 ## Overview
 
-This project is a mini RPA orchestrator written in Python.
+This project is a small RPA orchestrator written in Python.
 
 It is designed as a lightweight alternative where enterprise orchestrators would be unnecessary overhead,
 focusing on clarity, ease of modification, and running on a single machine.
@@ -92,20 +92,24 @@ The diagram shows how:
 * State is synchronized via `handover.json`
 * Failures transition the system into safestop
 * Your RPA tool must follow this model
-
+* Safestop is an emergency mode that breaks the state synchronization
 
 ## Features
 
 * Email-driven job processing (personal inbox)
-* Shared inbox support (extensible)
+* Shared inbox support (partially implemented)
 * Data-driven jobs (ERP/data queries)
 * File-based IPC (`handover.json`)
 * SQLite audit logging (`job_audit.db`)
 * Crash-safe mode (`safestop`)
-* Remote reboot mechanism (`reboot.flag`)
+* Degraded emergency mode after fatal errors
+* Controlled restart mechanism (`restart.flag`)
+* Stop hook from the RPA side (`stop.flag`)
 * Built-in screen recording (ffmpeg)
+* Final user replies after verification (DONE / FAIL)
 * Runs without administrator rights
 * Cross-platform (Windows and Linux)
+* Screen-recording path included in final reply if available
 * Single-file runtime (`main.py`) for easy sharing and inspection
 
 ---
@@ -116,7 +120,7 @@ The diagram shows how:
 The system supports multiple job producers:
 
 * Personal inbox (`personal_inbox`)
-* Shared mailbox (planned/partial)
+* Shared mailbox (partially implemented)
 * Scheduled jobs (ERP/data queries)
 
 All sources produce standardized **candidates**, processed through a unified flow.
@@ -188,7 +192,7 @@ shared_inbox/
 handover.json
 job_audit.db
 friends.xlsx
-recordings/
+recordings_destination/
 ```
 
 ---
@@ -257,7 +261,16 @@ Most users will need to replace or customize:
 - the operating hours
 - the RPA tool implementation
 
+
 ---
+
+## Design Philosophy
+* Simplicity over scalability
+* Rather crash than guess
+* Logic in Python, UI automation in the RPA tool
+
+---
+
 ## Limitations
 
 * Not designed for large-scale orchestration
@@ -266,12 +279,7 @@ Most users will need to replace or customize:
 * Minimal error recovery (by design)
 * Pure Python-only jobs are out of scope by design.
 
-
 ---
-
-## Philosophy (add this??)
-* Simplicity over scalability
-* Rather crash than guess
 
 ## License
 
