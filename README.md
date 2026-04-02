@@ -1,12 +1,12 @@
 # LocalRPA Orchestrator
 
-A lightweight orchestrator that keeps logic in Python and delegates UI work to RPA tools.
+A lightweight python orchestrator for email- and data-driven automation, delegating execution RPA tools.
 
 ---
 
 ## Overview
 
-This project is a small RPA orchestrator written in Python.
+The main idea is an orchestrator that keeps logic in Python and delegates UI work to RPA tools.
 
 It is designed as a lightweight alternative where enterprise orchestrators would be unnecessary overhead,
 focusing on clarity, ease of modification, and running on a single machine.
