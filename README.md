@@ -1,14 +1,13 @@
 # LocalRPA Orchestrator
 
-A lightweight python orchestrator for email- and data-driven automation, delegating execution RPA tools.
+A lightweight orchestrator that keeps logic in Python — and uses RPA tools only for UI execution.
 
 ---
 
 ## Overview
+This project follows a principle: **automation logic belongs in Python — UI execution belongs in RPA tools.**
 
-The main idea is an orchestrator that keeps logic in Python and delegates UI work to RPA tools.
-
-It is designed as a lightweight alternative where enterprise orchestrators would be unnecessary overhead,
+It is designed as a smaller alternative to enterprise orchestrators,
 focusing on clarity, ease of modification, and running on a single machine.
 
 It does NOT replace RPA tools.
@@ -31,17 +30,19 @@ to perform screen-based automation. Think of this as the control around the RPA 
 
 ---
 
-## Typical examples
+## Example dashboard
+<img width="1209" height="635" alt="example_dash" src="https://github.com/user-attachments/assets/dc12a84b-c329-4b91-b402-387128197f9a" />
 
-### Email-driven job
+---
+
+## Job source examples
+
+#### Email-driven job
 A user sends an email → Python validates and prepares the job → writes to `handover.json` → RPA executes UI actions → Python verifies and responds.
 
-### Data-driven job
+#### Data-driven job
 Python polls a data source → detects a valid case → prepares payload → signals RPA → RPA executes → Python verifies the outcome.
 
-
-Example dashboard during runtime:
-<img width="1209" height="635" alt="example_dash" src="https://github.com/user-attachments/assets/dc12a84b-c329-4b91-b402-387128197f9a" />
 
 ---
 
