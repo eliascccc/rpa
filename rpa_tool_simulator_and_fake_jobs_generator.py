@@ -281,6 +281,8 @@ class RPAToolSimulator:
             job_id = handover_data.get("job_id")
 
             
+            #time.sleep(2) # simulate some time... 
+
             # ----------------------------------------------
             # JOB1
             # ----------------------------------------------
@@ -347,7 +349,6 @@ class RPAToolSimulator:
             # ----------------------------------------------
             # Handover to Orchestrator
             # ----------------------------------------------
-            time.sleep(5)
             with open("handover.json", "w", encoding="utf-8") as f:
                 json.dump(handover_data, f, indent=2)
 
