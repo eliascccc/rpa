@@ -216,7 +216,7 @@ Python is great for logic and data processing, but:
 
 #### Why not use an enterprise orchestrator?
 
-Enterprise orchestrators (e.g. UiPath Orchestrator, Control Room):
+Enterprise orchestrators (e.g. UiPath Orchestrator, Control Room, [orchestrator_rpa](https://github.com/daferferso/orchestrator_rpa)):
 
 * Require infrastructure, setup, and licensing
 * Are designed for large-scale, multi-bot environments
