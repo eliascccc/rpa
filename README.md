@@ -1,32 +1,15 @@
-# LocalRPA Orchestrator
+# Robot Runtime
 
-A lightweight orchestrator that keeps logic in Python — and uses RPA tools only for UI execution.
+A python runtime for small scale RPA
 
 ---
 
 ## Overview
 
-The goal is a simple way to introduce RPA in a team.
-It follows the principle: **automation logic belongs in Python — UI execution belongs in RPA tools.**
-
-It is designed as a smaller alternative to enterprise orchestrators,
-focusing on clarity, ease of modification, and running on a single machine.
-
-It does NOT replace RPA tools.
-
-Instead, it orchestrates them:
-you still need a real RPA tool (Power Automate, UiPath Studio, Blue Prism, etc.)
-to perform screen-based automation. Think of this as the shell around the RPA, not the robot itself.
-
-## Responsibilities
-
-| Step | Orchestrator (this project) | RPA tool |
-| ---- |:--------------------------:|:----------:|
-| Job intake| ✓ |  |
-| Handover | → | ✓ |
-| Job execution |  | ✓ |
-| Handover | ✓ | ← |
-| Job verification | ✓ |  |
+'Runtime' is this text refers to the input layer, local orchestration and decision logic part of an RPA deployment. (this project is just the Runtime part), You also need an rpa tool (power automate, uipath studio)
+to do the UI autmations. The Runtime and the RPA tool together forms 'the robot'.
+This project is useful for getting started with automating tasks in a business unit. it runs on a single machine with one single file.
+this principle is: screenclicks -> done by the RPA tool. The rest (job intake, orchestration and logic) -> this python project
 
 
 ---
@@ -38,7 +21,7 @@ to perform screen-based automation. Think of this as the shell around the RPA, n
 
 ## Job source examples
 
-The orchestrator supports two types of job sources: emails and queries.
+The runtime supports two types of job sources: emails and queries.
 
 #### Email-driven
 A user sends an email → Python validates and prepares the job → writes to `handover.json` → RPA executes UI actions → Python verifies and responds.
@@ -52,7 +35,7 @@ Python polls a data source → detects a valid case → prepares payload → sig
 ## Key Idea
 This project separates responsibilities between the Orchestrator and the RPA tool:
 
-* The **Orchestrator (this project)** handles:
+* The **Runtime (this project)** handles:
   - how jobs enter the system (e.g. via email)
   - how jobs are discovered autonomously (e.g. queries)
   - access control and validation
@@ -68,20 +51,6 @@ They communicate through a file-based IPC mechanism (`handover.json`).
 
 ---
 
-## What this project is not
-
-You still need a real RPA tool to execute UI automation steps.
-
-This includes tools such as:
-
-* Microsoft Power Automate
-* UiPath Studio
-* Blue Prism
-* [Robot Framework](https://github.com/robotframework/robotframework)
-* [TagUI](https://github.com/aisingapore/TagUI)
-* [RPA for Python](https://github.com/tebelorg/RPA-Python)
-
-These tools perform the actual UI interactions (clicks, keyboard input, screen automation).
 
 ---
 
@@ -89,35 +58,10 @@ These tools perform the actual UI interactions (clicks, keyboard input, screen a
 
 <img width="1140" height="1709" alt="workflow" src="https://github.com/user-attachments/assets/9e9b1135-76c9-40d6-9f7f-785cfbde715d" />
 
-The diagram shows how:
+The diagram shows:
 
-* The Orchestrator and the RPA tool run independently
-* State is synchronized via `handover.json`
-* Failures transition the system into a safestop
-* Your RPA tool must follow this model
-
----
-
-## Two distinct email channels
-
-#### 1. Personal inbox (command channel)
-
-This is a direct communication channel to the robot.
-
-* Users explicitly send requests to the robot (e.g. rpa@company.com)
-* The robot may reply to the sender
-* Access control is enforced (e.g. via friends.xlsx)
-* This behaves like a command interface
-
-#### 2. Shared inbox (operational channel)
-
-This is a passive monitoring channel.
-
-* The robot listens to an existing business inbox (e.g. orders@company.com)
-* Senders are typically external and unaware of the robot
-* The robot must never reply
-* The robot only processes emails that match a defined scope
-* All other emails are ignored or returned to the inbox
+* How the Runtime and the RPA tool run independently
+* How your RPA tool must be implemented
 
 ---
 
@@ -126,11 +70,8 @@ This is a passive monitoring channel.
 * Email-driven job processing (personal inbox)
 * Shared inbox support (partially implemented)
 * Query-driven jobs (ERP/data polling)
-* File-based IPC (`handover.json`)
 * SQLite audit-style logging (`job_audit.db`)
 * Crash-safe mode (`safestop`)
-* Controlled restart mechanism (`restart.flag`)
-* Stop hook from the RPA side (`stop.flag`)
 * Built-in screen recording (ffmpeg)
 * Final user replies after verification (DONE / FAIL)
 * Screen-recording link included in final reply
@@ -166,23 +107,10 @@ Use included dev tools:
 
 * `fake_jobs_generator.py`
 * `rpa_tool_simulator.py`
-* `select_all_from_job_audit.py`
 
 ---
 
-## Project Structure (simplified)
 
-```
-main.py
-personal_inbox/
-shared_inbox/
-handover.json
-job_audit.db
-friends.xlsx
-recordings_destination/
-```
-
----
 
 ## Intended Use Case
 
@@ -191,6 +119,29 @@ recordings_destination/
 * No admin rights required
 * Cheap “extra laptop” deployment
 * Pilot / proof-of-concept automation
+
+
+
+
+
+
+
+
+## What this project is not
+
+You still need a real RPA tool to execute UI automation steps.
+
+This includes tools such as:
+
+* Microsoft Power Automate
+* UiPath Studio
+* Blue Prism
+* [Robot Framework](https://github.com/robotframework/robotframework)
+* [TagUI](https://github.com/aisingapore/TagUI)
+* [RPA for Python](https://github.com/tebelorg/RPA-Python)
+
+These tools perform the actual UI interactions (clicks, keyboard input, screen automation).
+
 
 ---
 ## Why not just use X?
@@ -203,6 +154,9 @@ You can — but it tends to lead to:
 * Difficult testing and debugging
 * Fragile automations that break on small UI changes
 
+In this project the RPA tool is used for what it does best: UI interactions (clicks, keyboard input, screen automation).
+This tools include Microsoft Power Automate, UiPath Studio, Blue Prism, [Robot Framework](https://github.com/robotframework/robotframework), [TagUI](https://github.com/aisingapore/TagUI), [RPA for Python](https://github.com/tebelorg/RPA-Python)
+
 ---
 
 #### Why not just use Python for everything?
@@ -212,20 +166,23 @@ Python is great for logic and data processing, but:
 * It cannot reliably interact with arbitrary GUIs
 * Many business systems (ERP, legacy apps) require UI automation
 
+This project capitalize on the simplicity and large resources avaliable for Python ecosystem.
+
 ---
 
 #### Why not use an enterprise orchestrator?
 
-Enterprise orchestrators (e.g. UiPath Orchestrator, Control Room, [orchestrator_rpa](https://github.com/daferferso/orchestrator_rpa)):
+Enterprise orchestrators (e.g. UiPath Orchestrator, Control Room, [orchestrator_rpa](https://github.com/daferferso/orchestrator_rpa), [orchestrator_rpa](https://github.com/daferferso/orchestrator_rpa), [openorchestrator](https://github.com/itk-dev-rpa/OpenOrchestrator), robotframework() 
 
 * Require infrastructure, setup, and licensing
 * Are designed for large-scale, multi-bot environments
 
-This project intentionally avoids that scope and runs on a single machine with simple file- and DB-based state
+This project intentionally avoids that scope and runs on a single machine with simple file- and DB-based state.
+If you need distributed execution, queues, or centralized control — this project is the wrong tool.
 
 ---
 
-#### Why not use a workflow orchestrator?
+#### Why not use a workflow orchestrator? (delete this?)
 
 Workflow tools (e.g. Airflow, Prefect) are built for:
 
@@ -236,34 +193,12 @@ Workflow tools (e.g. Airflow, Prefect) are built for:
 This project is much smaller, local-first, and designed around business-triggered jobs (email, ERP signals) plus screen-based RPA
 
 ---
-## What you will likely need to adapt
+## Deployment require
 
-Most users will need to replace or customize:
-
-- the mail backend (e.g. connect a real personal inbox such as rpa@yourcompany.com)
-- the query/ERP backend
-- the job handlers
-- the network health check path
-- the screen-recording destination (a shared network drive)
-- the operating hours
-- the RPA tool implementation
-
----
-
-## Design Philosophy
-* Simplicity over scalability
-* Rather crash than guess
-* Logic in Python, UI automation in the RPA tool
-
----
-
-## Limitations
-
-* Not designed for large-scale orchestration
-* No distributed execution
-* File-based IPC only
-* Minimal error recovery (by design)
-* Pure Python-only jobs are out of scope by design.
+- extra laptop
+- a new inbox such as rpa@yourcompany.com
+- an RPA tool
+- runtime setup (mail & ERP backend, do jobhandlers, select screen-recording destination folder, set operating hours and network health check path)
 
 ---
 
@@ -278,5 +213,3 @@ MIT (recommended)
 Early-stage / experimental, but functional.
 
 ---
-
-> Written with help from you-know-who
