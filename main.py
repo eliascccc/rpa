@@ -48,7 +48,7 @@ JobSourceType: TypeAlias = Literal["personal_inbox", "shared_inbox", "erp_query"
 JobStatus: TypeAlias = Literal["REJECTED", "QUEUED", "RUNNING", "VERIFYING", "FAIL", "DONE"]
 JobAction: TypeAlias = Literal["DELETE_ONLY", "REPLY_AND_DELETE", "QUEUE_RPA_TOOL", "SKIP", "MOVE_BACK_TO_INBOX"]
 UIStatusText: TypeAlias = Literal["online", "safestop", "working", "no network" , "ooo"]
-UserOutcome: TypeAlias = Literal["DONE", "REJECTED", "PRE_HANDOVER_CRASH", "RPA_TOOL_CRASH", "VERIFICATION_FAIL", "OUT_OF_SERVICE",] # PRE_HANDOVER_CRASH includes 'not started', eg. RPA tool is broken
+UserOutcome: TypeAlias = Literal["DONE", "REJECTED", "PRE_HANDOVER_CRASH", "RPA_TOOL_CRASH", "VERIFICATION_MISMATCH", "POST_HANDOVER_CRASH", "OUT_OF_SERVICE",]
 
 @dataclass
 class JobCandidate:
@@ -808,16 +808,6 @@ class PreHandoverExecutor:
             if decision.job_status is not None:
                 raise ValueError("MOVE_BACK_TO_INBOX should not set job_status")
 
-        # ------------------------------------------------------------
-        # CRASH
-        # ------------------------------------------------------------
-        elif action == "CRASH":
-            if decision.error_message is None:
-                raise ValueError("CRASH requires error_message")
-            
-            if decision.job_status != "FAIL":
-                raise ValueError("CRASH requires job_status='FAIL'")
-
         else:
             # should never happen due to earlier validation
             raise ValueError(f"Unhandled action: {action}")
@@ -1021,24 +1011,48 @@ class PostHandoverFinalizer:
 
 
     def poll_once(self, active_job: ActiveJob, job_id: int) -> None:
-
-        job_type = active_job.job_type
-
-        # note in audit that the job is 're-taken' from RPA
-        self.audit_repo.update_job(job_id=job_id, job_status="VERIFYING")
-
-        # use job-specific verification 
-        handler = self.job_handlers.get(job_type)
-        if handler is None:
-            ok_or_error = f"No handler for job_type={job_type}"
-
-        else:
-            try:
+        try:
+            # note in audit that the job is 're-taken' from RPA
+            self.audit_repo.update_job(job_id=job_id, job_status="VERIFYING")
+            
+            job_type = active_job.job_type
+            handler = self.job_handlers.get(job_type)
+            if handler is None:
+                ok_or_error = f"No handler for job_type={job_type}"
+            else:
                 ok_or_error = handler.verify_result(active_job)
-            except Exception as err:
-                ok_or_error = f"verification crash: {err}"
 
-        self.finalize_job_result(ok_or_error, active_job)
+            if ok_or_error == "ok":
+                self.finalize_job_result(active_job, job_status="DONE", error_code=None, error_message=None)
+                return
+            
+        except Exception as e:
+             # verification stage crashed, outcome unknown
+            try:
+                self.audit_repo.update_job(
+                job_id=job_id,
+                job_status="FAIL",
+                error_code="POST_HANDOVER_CRASH",
+                error_message=f"crash during verification stage: {e}",
+                job_finish_time=datetime.datetime.now().strftime("%H:%M:%S"),
+            )
+            except Exception as e2:
+                self.logger.system(f"[PostHandoverFinalizer] {e} {e2}", job_id)
+                
+
+            raise RuntimeError(f"{e} (POST_HANDOVER_CRASH)")
+        
+
+        if str(ok_or_error).endswith("(VERIFICATION_MISMATCH)"):
+        # consider mismatch a critical error 
+            self.finalize_job_result(
+                active_job,
+                job_status="FAIL",
+                error_code="VERIFICATION_MISMATCH",
+                error_message=str(ok_or_error),)
+            raise RuntimeError(f"{ok_or_error}")
+        
+        raise RuntimeError(f"Unknown ok_or_error: {ok_or_error} (POST_HANDOVER_CRASH)")
 
 
     def _update_audit(self, job_id, job_status, error_code, jobhandler_error_message,) -> None:
@@ -1066,23 +1080,11 @@ class PostHandoverFinalizer:
         self.logger.system(f"{job_status} ({job_type})", active_job.job_id)
 
         
-    def finalize_job_result(self, ok_or_error, active_job: ActiveJob):
-        job_status: JobStatus
-
-        if ok_or_error == "ok":
-            job_status = "DONE"
-            jobhandler_error_message = None
-            error_code = None
-        else:
-            job_status = "FAIL"
-            jobhandler_error_message = ok_or_error
-            error_code="VERIFICATION_FAIL"
-
-        
+    def finalize_job_result(self, active_job: ActiveJob, job_status: JobStatus, error_code: str | None, error_message: str | None):
         job_id = active_job.job_id
 
         # update audit w/ result (DONE/FAIL)
-        self._update_audit(job_id, job_status, error_code, jobhandler_error_message)
+        self._update_audit(job_id, job_status, error_code, error_message)
         
         # do side effects
         self.recording_service.stop(job_id)
@@ -1090,7 +1092,7 @@ class PostHandoverFinalizer:
         self.hide_recording_overlay()
  
         # do mail source specifics (email)
-        final_reply_sent = self.handle_source_completion(active_job, job_status, jobhandler_error_message)
+        final_reply_sent = self.handle_source_completion(active_job, job_status, error_code, error_message)
 
         if final_reply_sent:
             self.audit_repo.update_job(job_id=job_id, final_reply_sent=True,)
@@ -1098,10 +1100,6 @@ class PostHandoverFinalizer:
         # update ui w/ result (DONE/FAIL)
         self._update_logs(job_status, active_job)
 
-
-        # do safestop if verification failed
-        if ok_or_error != "ok":
-            raise RuntimeError(f"VERIFICATION_FAIL: job_id {job_id} crashed, verification failed: {ok_or_error}") 
 
      
     def _map_candidate_from_activejob(self, active_job: ActiveJob) -> JobCandidate:
@@ -1119,8 +1117,7 @@ class PostHandoverFinalizer:
                 )
         
   
-    def handle_source_completion(self, active_job: ActiveJob, job_status: str, jobhandler_error_message: str | None) -> bool:
-
+    def handle_source_completion(self, active_job: ActiveJob, job_status: str, error_code: str | None, error_message: str | None) -> bool:
         if active_job.job_source_type == "erp_query":
             return False
 
@@ -1142,13 +1139,20 @@ class PostHandoverFinalizer:
                 )
                 return True
 
-            if job_status == "FAIL":
+            elif job_status == "FAIL":
+                if error_code == "VERIFICATION_MISMATCH":
+                    outcome = "VERIFICATION_MISMATCH"
+                elif error_code == "POST_HANDOVER_CRASH":
+                    outcome = "POST_HANDOVER_CRASH"
+                else:
+                    outcome = "RPA_TOOL_CRASH"  # eller raise, om du vill vara strikt
+
                 self.notification_service.send_job_reply(
                     candidate=candidate,
-                    outcome="VERIFICATION_FAIL",
+                    outcome=outcome,
                     job_id=job_id,
-                    reason=jobhandler_error_message,
-                    )
+                    reason=error_message,
+                )
                 return True
 
             raise ValueError(f"unexpected job_status in handle_source_completion(): {job_status}")
@@ -1270,6 +1274,7 @@ class ExampleJob3Handler:
     
 
     def verify_result(self, active_job: ActiveJob) -> str:
+    
         job_id = active_job.job_id
 
         # get erp order number/id
@@ -1277,7 +1282,7 @@ class ExampleJob3Handler:
         if not rpatool_payload:
             return "missing rpatool_payload"
         
-         # get the order number/id and the target qty sent to RPA tool
+        # get the order number/id and the target qty sent to RPA tool
         source_ref = rpatool_payload.get("source_ref")
         target_order_qty = rpatool_payload.get("target_order_qty")
 
@@ -1287,12 +1292,13 @@ class ExampleJob3Handler:
 
         # compare them
         if order_qty_erp != target_order_qty:
-            message= f"ERP still shows mismatch after RPA update. Should be: {target_order_qty}, is: {order_qty_erp}"
+            message= f"ERP shows mismatch. {source_ref} should be {target_order_qty}, is {order_qty_erp} (VERIFICATION_MISMATCH)"
             self.logger.system(message, job_id)
             return message
 
         self.logger.system(f"OK. Should be: {target_order_qty}, is: {order_qty_erp}", job_id)
         return "ok"
+
 
 
 # ============================================================
@@ -1355,7 +1361,11 @@ class HandoverRepository:
 
                 os.replace(temp_path, self.HANDOVER_FILE)
                 
-                self.logger.system(f"prepared handover for job_type {handover_data.get("job_type")} with rpatool_payload {handover_data.get("rpatool_payload")}", job_id) # only log safe data
+                self.logger.system(
+                    f"prepared handover for job_type {handover_data.get('job_type')} "
+                    f"with rpatool_payload {handover_data.get('rpatool_payload')}",
+                    job_id,
+                )               
                 return
 
             except Exception as err:
@@ -1492,10 +1502,6 @@ class UserNotificationService:
         self.recordings_destination_folder = recordings_destination_folder
         self.watchdog_timeout = watchdog_timeout
 
-    # -------------------------
-    # Public API
-    # -------------------------
-
     def send_job_reply(self, candidate: JobCandidate, outcome: UserOutcome, job_id: int, reason=None, from_safestop:bool=False, from_initialize:bool=False) -> None:
         
         subject, body = self._build_job_reply(
@@ -1525,14 +1531,16 @@ class UserNotificationService:
         elif job_status == "RUNNING":
             outcome = "RPA_TOOL_CRASH"
         elif job_status == "VERIFYING":
-            outcome = "VERIFICATION_FAIL"
+            outcome = "POST_HANDOVER_CRASH"
         elif job_status == "FAIL":
             if error_code == "PRE_HANDOVER_CRASH":
                 outcome = "PRE_HANDOVER_CRASH"
             elif error_code == "RPA_TOOL_CRASH":
                 outcome = "RPA_TOOL_CRASH"
-            elif error_code == "VERIFICATION_FAIL":
-                outcome = "VERIFICATION_FAIL"
+            elif error_code == "VERIFICATION_MISMATCH":
+                outcome = "VERIFICATION_MISMATCH"
+            elif error_code == "POST_HANDOVER_CRASH":
+                outcome = "POST_HANDOVER_CRASH"
             else:
                 outcome = "RPA_TOOL_CRASH"
         else:
@@ -1604,9 +1612,6 @@ class UserNotificationService:
             delete_after=False,
         )
 
-    # -------------------------
-    # Internal builders
-    # -------------------------
 
     def _build_job_reply(self, outcome: UserOutcome, job_id: int, reason, from_safestop:bool, from_initialize:bool) -> tuple[str, str]:
         # note to self: for increased user value, extend reply with a short summary of result, eg. "changed PO 450221 on SKU 110212 from 34pcs to 31pcs"
@@ -1661,12 +1666,31 @@ class UserNotificationService:
                 )
                 
 
-        elif outcome == "VERIFICATION_FAIL":
+        elif outcome == "VERIFICATION_MISMATCH":
             subject = "FAIL"
             body = (
-                    "The robot completed all the steps, but crashed in the verification stage.\n\n"
+                    "The robot completed the request, and the result was checked in ERP.\n"
+                    "However, the final ERP data did not match the expected result.\n\n"
                     f"{self._format_reason(reason)}"
-                    f"Job ID: {job_id}"
+                    f"Job ID: {job_id}\n"
+                    "You NEED TO review the result manually in ERP.\n\n"
+                    f"{recording_text}"
+                    )
+            if from_safestop:
+                body += (
+                    "To avoid further problems, the robot will go out-of-service.\n"
+                )  
+            body += (
+                    "This email can be deleted."
+                )
+        
+        elif outcome == "POST_HANDOVER_CRASH":
+            subject = "FAIL"
+            body = (
+                    "The robot completed the request, but crashed during the final verification stage.\n"
+                    "The outcome could therefore not be confirmed automatically.\n\n"
+                    f"{self._format_reason(reason)}"
+                    f"Job ID: {job_id}\n"
                     "Please verify the result manually in ERP.\n\n"
                     f"{recording_text}"
                     )
@@ -1698,7 +1722,6 @@ class UserNotificationService:
             ) + "\n\n" + body
 
         return subject, body
-
 
     def _get_recording_text(self, job_id: int) -> str:
         recording_path = self._get_recording_path(job_id)
@@ -2635,6 +2658,8 @@ class SafeStopController:
 
         # placeholder to implement recovery reply for emails stuck in 'processing' folder in personal_inbox 
 
+        # placeholder for recovery logic for post_handover crash/mismatch for query jobs
+
         try: self.hide_recording_overlay()
         except Exception as e: self.logger.system(e, job_id)
 
@@ -2656,8 +2681,10 @@ class SafeStopController:
             return "PRE_HANDOVER_CRASH"
         if "RPA_TOOL_CRASH" in err_short:
             return "RPA_TOOL_CRASH"
-        if "VERIFICATION_FAIL" in err_short:
-            return "VERIFICATION_FAIL"
+        if "VERIFICATION_MISMATCH" in err_short:
+            return "VERIFICATION_MISMATCH"
+        if "POST_HANDOVER_CRASH" in err_short:
+            return "POST_HANDOVER_CRASH"
         
         if active_job == None:
             return "SAFESTOP"
@@ -2667,7 +2694,7 @@ class SafeStopController:
         if active_job.ipc_state == "job_running":
             return "RPA_TOOL_CRASH"
         if active_job.ipc_state == "job_verifying":
-            return "VERIFICATION_FAIL"
+            return "POST_HANDOVER_CRASH"
 
         return "SAFESTOP"
 
@@ -3348,6 +3375,10 @@ class RobotRuntime:
         
     def initialize_runtime(self,):
         self.logger.system(f"RuntimeThread started, version={VERSION}, pid={os.getpid()}")
+
+        # write 'idle' to allow for manual start of main.py (not the intended way)
+        active_job=ActiveJob(ipc_state="idle")
+        self.handover_repo.write(active_job)
 
         active_job = self.handover_repo.read()
         if active_job.ipc_state != "idle":

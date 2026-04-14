@@ -101,6 +101,7 @@ class RPAToolSimulator:
                     self.simulate_rpa_result_job1(erp_order_number, new_qty)
 
                     new_ipc_state = "job_verifying"
+                    
 
                 # JOB3
                 elif job_type == "job3":
@@ -109,7 +110,7 @@ class RPAToolSimulator:
 
                     self.log_system("activities on screen_1 in ERP completed", job_id)
                     self.log_system("activities on screen_2 in ERP completed", job_id)
-                    self.simulate_rpa_result_job1(erp_order_number, new_qty)
+                    self.simulate_rpa_result_job1(erp_order_number, new_qty) # use job1 example         
 
                     new_ipc_state = "job_verifying"
 
