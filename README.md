@@ -86,18 +86,23 @@ The diagram shows:
 
 ### Start
 
+**Recommended (production-like setup)**  
+Run `main.py` from the RPA tool.  
+The RPA tool starts and stops the runtime, which makes the robot behave as a single unit.
+
+**Manual start**
 ```bash
 python main.py
 ```
 
 ---
 
-### Test setup
+### Testing / development
 
-Use included dev tools:
+Use the included dev tools to simulate real inputs and runtime behavior:
 
-* `fake_jobs_generator.py`
-* `rpa_tool_simulator.py`
+* `fake_jobs_generator.py` – to generate test jobs (emails / data)
+* `rpa_tool_simulator.py` – to simulate the RPA tool and start main.py in the intended way
 
 ---
 
