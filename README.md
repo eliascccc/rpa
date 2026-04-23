@@ -1,14 +1,12 @@
 # Robot Runtime
 
-Robot Runtime is a local Python runtime for small-scale RPA deployments.
-It handles everything except UI automation:
-job intake, orchestration, decision logic, and result verification.
-UI automation is delegated to an external RPA tool such as UiPath Studio or Power Automate.
+Robot Runtime is a local Python runtime for small-scale, single-machine RPA deployments.
+It handles job intake, orchestration, decision logic, and result verification, while delegating UI automation to an external RPA tool such as UiPath Studio or Power Automate.
 Together, the runtime and the RPA tool form the robot.
 
-Unlike traditional RPA setups — where users manually trigger predefined automations — this runtime is event-driven. It continuously listens for incoming work (emails or queries) and decides what to do. It runs on a single machine as a single Python file.
+Unlike traditional RPA setups, where users manually trigger predefined automations, this runtime is event-driven. It continuously listens for incoming work (emails or queries) and decides what to do. The runtime core lives in a single Python file (`main.py`).
 
-The principle is: **UI interaction** → handled by the RPA tool. **The rest (logic and orchestration)** → this Python runtime
+The principle is: **UI interaction** is handled by the RPA tool. **The rest (logic and orchestration)** is handled by this Python runtime.
 
 ---
 
@@ -48,7 +46,7 @@ Python polls a data source → detects a valid case → prepares a payload → s
 The diagram shows:
 
 * How the Runtime and the RPA tool run independently
-* How your RPA tool should be implemented
+* How your RPA tool should communicate with Runtime
 
 ---
 
@@ -60,7 +58,7 @@ The diagram shows:
 * SQLite audit-style logging (`job_audit.db`)
 * Crash-safe mode (`safestop`)
 * Built-in screen recording (ffmpeg)
-* Final user replies after verification (DONE / FAIL)
+* Final user replies for personal-inbox jobs after verification (DONE / FAIL)
 * Screen-recording link included in final reply
 * Runs without administrator rights
 * Single-file runtime (`main.py`) for easy sharing and inspection
@@ -72,7 +70,7 @@ The diagram shows:
 
 ### Requirements
 
-* Python 3.14
+* Python 3.10+
 * `openpyxl`
 * `ffmpeg` (optional, for screen recording)
 
